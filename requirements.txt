@@ -4,4 +4,5 @@ httpx
 beautifulsoup4
 pydantic
 snscrape
-Yam
+pandas
+lxml
