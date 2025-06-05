@@ -8,6 +8,9 @@ import snscrape.modules.twitter as sntwitter
 
 app = FastAPI(title="India Rescue Updates Scraper API")
 
+# -------------------------
+# Response Model
+# -------------------------
 class RescueUpdate(BaseModel):
     title: str
     summary: str
@@ -18,7 +21,9 @@ class RescueUpdate(BaseModel):
 class RescueUpdatesResponse(BaseModel):
     updates: List[RescueUpdate]
 
-# --------- Web Scrapers ---------
+# -------------------------
+# Web Scraper: PIB
+# -------------------------
 async def scrape_pib(query: str) -> List[RescueUpdate]:
     url = "https://pib.gov.in/PressReleasePage.aspx"
     results = []
@@ -39,6 +44,9 @@ async def scrape_pib(query: str) -> List[RescueUpdate]:
                 ))
     return results
 
+# -------------------------
+# Web Scraper: Sikkim Gov
+# -------------------------
 async def scrape_sikkim(query: str) -> List[RescueUpdate]:
     url = "https://sikkim.gov.in/media/press-release"
     results = []
@@ -61,12 +69,26 @@ async def scrape_sikkim(query: str) -> List[RescueUpdate]:
                 ))
     return results
 
-# --------- Twitter Scraper ---------
-def scrape_twitter(query: str, max_results: int = 10) -> List[RescueUpdate]:
-    handles = ["PIB_India", "ndmaindia", "adgpi"]
+# -------------------------
+# Twitter Monitor: Critical Family Keywords
+# -------------------------
+def scrape_twitter_critical_terms(max_results: int = 15) -> List[RescueUpdate]:
+    terms = [
+        '"Lt Col Sandhu"',
+        '"Aarti Sandhu"',
+        '"Amayra Sandhu"',
+        '"woman with child rescued Sikkim"',
+        '"Sikkim rescue family found"',
+        '"body found Sikkim"',
+        '"retired Indian Air Force Sikkim"',
+        '"missing family Sikkim"',
+        '"child rescued Sikkim"'
+    ]
+
+    combined_query = " OR ".join(terms)
     results = []
-    search_query = f"{query} (" + " OR ".join([f'from:{h}' for h in handles]) + ")"
-    for tweet in sntwitter.TwitterSearchScraper(search_query).get_items():
+
+    for tweet in sntwitter.TwitterSearchScraper(combined_query).get_items():
         if len(results) >= max_results:
             break
         results.append(RescueUpdate(
@@ -78,12 +100,14 @@ def scrape_twitter(query: str, max_results: int = 10) -> List[RescueUpdate]:
         ))
     return results
 
-# --------- API Endpoint ---------
+# -------------------------
+# Main API Endpoint
+# -------------------------
 @app.get("/rescue-updates", response_model=RescueUpdatesResponse, operation_id="fetchRescueUpdates")
 async def get_rescue_updates(query: str = Query(..., description="Search query like 'Sikkim' or 'rescue'")):
     pib_updates = await scrape_pib(query)
     sikkim_updates = await scrape_sikkim(query)
-    twitter_updates = scrape_twitter(query)
+    twitter_updates = scrape_twitter_critical_terms()
     all_updates = pib_updates + sikkim_updates + twitter_updates
     sorted_updates = sorted(all_updates, key=lambda x: x.date, reverse=True)
     return RescueUpdatesResponse(updates=sorted_updates[:8])
