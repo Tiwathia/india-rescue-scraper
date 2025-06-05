@@ -1,0 +1,48 @@
+openapi: 3.1.0
+info:
+  title: India Rescue Scraper API
+  description: |
+    Combines official government websites and Twitter feeds to monitor rescue operations in India.
+    Sources include PIB, Sikkim.gov.in, @PIB_India, @adgpi, and @ndmaindia.
+  version: 1.1.0
+servers:
+  - url: https://rescue-scraper.onrender.com
+paths:
+  /rescue-updates:
+    get:
+      operationId: fetchRescueUpdates
+      summary: Get latest rescue updates from Indian government sources and Twitter feeds.
+      parameters:
+        - name: query
+          in: query
+          required: true
+          description: A keyword like "rescue" or "Sikkim"
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of recent rescue updates.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  updates:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        title:
+                          type: string
+                        summary:
+                          type: string
+                        source:
+                          type: string
+                        date:
+                          type: string
+                          format: date
+                        url:
+                          type: string
+                          format: uri
+        '204':
+          description: No updates found.
