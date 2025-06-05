@@ -6,7 +6,7 @@ info:
     Sources include PIB, Sikkim.gov.in, @PIB_India, @adgpi, and @ndmaindia.
   version: 1.1.0
 servers:
-  - url: https://rescue-scraper.onrender.com
+  - url: https://india-rescue-scraper.onrender.com
 paths:
   /rescue-updates:
     get:
