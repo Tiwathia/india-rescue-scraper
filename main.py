@@ -1,15 +1,20 @@
 from fastapi import FastAPI, Query
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, HttpUrl
 from typing import List
 import httpx
 from bs4 import BeautifulSoup
 from datetime import datetime
 import snscrape.modules.twitter as sntwitter
+import os
 
 app = FastAPI(title="India Rescue Updates Scraper API")
 
+# Serve static files like action.json and openapi.yaml for GPT
+app.mount("/static", StaticFiles(directory="static"), name="static")
+
 # -------------------------
-# Response Model
+# Data Models
 # -------------------------
 class RescueUpdate(BaseModel):
     title: str
@@ -22,7 +27,7 @@ class RescueUpdatesResponse(BaseModel):
     updates: List[RescueUpdate]
 
 # -------------------------
-# Web Scraper: PIB
+# Scraper: PIB
 # -------------------------
 async def scrape_pib(query: str) -> List[RescueUpdate]:
     url = "https://pib.gov.in/PressReleasePage.aspx"
@@ -48,7 +53,7 @@ async def scrape_pib(query: str) -> List[RescueUpdate]:
     return results
 
 # -------------------------
-# Web Scraper: Sikkim Gov
+# Scraper: Sikkim Government
 # -------------------------
 async def scrape_sikkim(query: str) -> List[RescueUpdate]:
     url = "https://sikkim.gov.in/media/press-release"
@@ -76,7 +81,7 @@ async def scrape_sikkim(query: str) -> List[RescueUpdate]:
     return results
 
 # -------------------------
-# Twitter Scraper: Critical Terms
+# Scraper: Twitter
 # -------------------------
 def scrape_twitter_critical_terms(max_results: int = 15) -> List[RescueUpdate]:
     terms = [
@@ -90,7 +95,6 @@ def scrape_twitter_critical_terms(max_results: int = 15) -> List[RescueUpdate]:
         '"missing family Sikkim"',
         '"child rescued Sikkim"'
     ]
-
     combined_query = " OR ".join(terms)
     results = []
     try:
@@ -119,7 +123,7 @@ async def get_rescue_updates(query: str = Query(..., description="Search query l
         twitter_updates = scrape_twitter_critical_terms()
         all_updates = pib_updates + sikkim_updates + twitter_updates
         sorted_updates = sorted(all_updates, key=lambda x: x.date, reverse=True)
-        print(f"[✅ SUCCESS] Found {len(sorted_updates)} total updates.")
+        print(f"[✅ SUCCESS] Total results: {len(sorted_updates)}")
         return RescueUpdatesResponse(updates=sorted_updates[:8])
     except Exception as e:
         print(f"[❌ API ERROR] {e}")
