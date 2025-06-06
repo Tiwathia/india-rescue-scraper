@@ -2,8 +2,8 @@
   "openapi": "3.1.0",
   "info": {
     "title": "India Rescue Scraper API",
-    "description": "Returns real-time updates about rescue operations in India — including PIB, Sikkim Gov, major TV news outlets, and Twitter — filtered to the last 72 hours.",
-    "version": "1.1.1"
+    "description": "Real-time updates on Indian Army and disaster rescue efforts from PIB, Sikkim.gov.in, NDTV, India Today, Times Now, and Twitter (last 72 hours).",
+    "version": "1.2.0"
   },
   "servers": [
     {
@@ -14,7 +14,7 @@
     "/rescue-updates": {
       "get": {
         "operationId": "fetchRescueUpdates",
-        "summary": "Get rescue updates from the past 72 hours from trusted sources.",
+        "summary": "Get rescue updates from the past 72 hours from official and media sources.",
         "parameters": [
           {
             "name": "query",
@@ -28,7 +28,43 @@
         ],
         "responses": {
           "200": {
-            "description": "List of updates from PIB, TV news, and Twitter (within last 72 hours)",
+            "description": "List of rescue updates from PIB, news channels, and Twitter (last 72 hours)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "updates": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "title": { "type": "string" },
+                          "summary": { "type": "string" },
+                          "source": { "type": "string" },
+                          "date": { "type": "string", "format": "date" },
+                          "url": { "type": "string", "format": "uri" }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "204": {
+            "description": "No updates found"
+          }
+        }
+      }
+    },
+    "/rss-summary": {
+      "get": {
+        "operationId": "getRssSummary",
+        "summary": "Get RSS-style news summaries from PIB and major Indian news sources.",
+        "responses": {
+          "200": {
+            "description": "List of RSS-style headlines from news portals that match rescue-related keywords.",
             "content": {
               "application/json": {
                 "schema": {
