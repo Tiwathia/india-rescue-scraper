@@ -9,9 +9,9 @@
   },
   "api": {
     "type": "openapi",
-    "url": "https://india-rescue-scraper.onrender.com/openapi.yaml"
+    "url": "https://india-rescue-scraper.onrender.com/static/openapi.yaml.txt"
   },
-  "logo_url": "https://india-rescue-scraper.onrender.com/logo.png",
+  "logo_url": "https://india-rescue-scraper.onrender.com/static/logo.png",
   "contact_email": "aditya.tiwathia@gmail.com",
   "legal_info_url": "https://india-rescue-scraper.onrender.com/legal"
 }
