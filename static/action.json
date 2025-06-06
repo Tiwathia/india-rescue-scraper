@@ -1,17 +1,62 @@
 {
-  "schema_version": "v1",
-  "name_for_human": "India Rescue Updates",
-  "name_for_model": "rescueUpdates",
-  "description_for_human": "Get real-time rescue updates from PIB, Sikkim Gov, and official Twitter feeds.",
-  "description_for_model": "Use this to fetch structured, real-time rescue updates from Indian government sources including PIB, NDMA, and Army accounts.",
-  "auth": {
-    "type": "none"
+  "openapi": "3.1.0",
+  "info": {
+    "title": "India Rescue Scraper API",
+    "description": "Returns real-time updates about rescue operations in India — including PIB, Sikkim Gov, major TV news outlets, and Twitter — filtered to the last 72 hours.",
+    "version": "1.1.1"
   },
-  "api": {
-    "type": "openapi",
-    "url": "https://india-rescue-scraper.onrender.com/static/openapi.yaml"
-  },
-  "logo_url": "https://india-rescue-scraper.onrender.com/static/logo.png",
-  "contact_email": "aditya.tiwathia@gmail.com",
-  "legal_info_url": "https://india-rescue-scraper.onrender.com/legal"
+  "servers": [
+    {
+      "url": "https://india-rescue-scraper.onrender.com"
+    }
+  ],
+  "paths": {
+    "/rescue-updates": {
+      "get": {
+        "operationId": "fetchRescueUpdates",
+        "summary": "Get rescue updates from the past 72 hours from trusted sources.",
+        "parameters": [
+          {
+            "name": "query",
+            "in": "query",
+            "required": true,
+            "description": "Keyword to search updates (e.g. 'sikkim', 'rescue', 'Sandhu')",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of updates from PIB, TV news, and Twitter (within last 72 hours)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "updates": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "title": { "type": "string" },
+                          "summary": { "type": "string" },
+                          "source": { "type": "string" },
+                          "date": { "type": "string", "format": "date" },
+                          "url": { "type": "string", "format": "uri" }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "204": {
+            "description": "No updates found"
+          }
+        }
+      }
+    }
+  }
 }
