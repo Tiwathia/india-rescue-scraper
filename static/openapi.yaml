@@ -21,7 +21,7 @@ paths:
             type: string
       responses:
         '200':
-          description: List of recent rescue updates.
+          description: A list of rescue updates
           content:
             application/json:
               schema:
@@ -45,4 +45,4 @@ paths:
                           type: string
                           format: uri
         '204':
-          description: No updates found.
+          description: No updates found
