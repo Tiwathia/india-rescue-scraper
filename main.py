@@ -4,12 +4,14 @@ from pydantic import BaseModel, HttpUrl
 from typing import List
 import httpx
 from bs4 import BeautifulSoup
-from datetime import datetime
+from datetime import datetime, timedelta
 import snscrape.modules.twitter as sntwitter
+import snscrape.base
+
+# Disable SSL verification for snscrape to prevent CERTIFICATE_VERIFY_FAILED
+snscrape.base._base._HTTPConnection.verify = False
 
 app = FastAPI(title="India Rescue Updates Scraper API")
-
-# Serve static files like openapi.yaml and action.json
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 # -------------------------
@@ -26,7 +28,7 @@ class RescueUpdatesResponse(BaseModel):
     updates: List[RescueUpdate]
 
 # -------------------------
-# Scraper: PIB
+# Scrapers for Web News
 # -------------------------
 async def scrape_pib(query: str) -> List[RescueUpdate]:
     results = []
@@ -50,9 +52,6 @@ async def scrape_pib(query: str) -> List[RescueUpdate]:
         print(f"[❌ PIB ERROR] {e}")
     return results
 
-# -------------------------
-# Scraper: Sikkim Gov
-# -------------------------
 async def scrape_sikkim(query: str) -> List[RescueUpdate]:
     results = []
     try:
@@ -77,9 +76,6 @@ async def scrape_sikkim(query: str) -> List[RescueUpdate]:
         print(f"[❌ SIKKIM ERROR] {e}")
     return results
 
-# -------------------------
-# Scraper: NDTV
-# -------------------------
 async def scrape_ndtv(query: str) -> List[RescueUpdate]:
     results = []
     try:
@@ -101,9 +97,6 @@ async def scrape_ndtv(query: str) -> List[RescueUpdate]:
         print(f"[❌ NDTV ERROR] {e}")
     return results
 
-# -------------------------
-# Scraper: India Today
-# -------------------------
 async def scrape_india_today(query: str) -> List[RescueUpdate]:
     results = []
     try:
@@ -127,9 +120,6 @@ async def scrape_india_today(query: str) -> List[RescueUpdate]:
         print(f"[❌ INDIA TODAY ERROR] {e}")
     return results
 
-# -------------------------
-# Scraper: Times Now
-# -------------------------
 async def scrape_times_now(query: str) -> List[RescueUpdate]:
     results = []
     try:
@@ -152,7 +142,7 @@ async def scrape_times_now(query: str) -> List[RescueUpdate]:
     return results
 
 # -------------------------
-# Scraper: Twitter (Hashtags + Keywords)
+# Twitter Scraper — Filtered to 72 Hours
 # -------------------------
 def scrape_twitter_critical_terms(max_results: int = 15) -> List[RescueUpdate]:
     terms = [
@@ -167,11 +157,13 @@ def scrape_twitter_critical_terms(max_results: int = 15) -> List[RescueUpdate]:
         '"Indian Army Sikkim rescue"'
     ]
     combined_query = " OR ".join(terms)
+    cutoff = datetime.utcnow() - timedelta(hours=72)
     results = []
+
     try:
         for tweet in sntwitter.TwitterSearchScraper(combined_query).get_items():
-            if len(results) >= max_results:
-                break
+            if tweet.date < cutoff:
+                continue
             results.append(RescueUpdate(
                 title=tweet.content[:80] + "...",
                 summary=tweet.content,
@@ -179,15 +171,17 @@ def scrape_twitter_critical_terms(max_results: int = 15) -> List[RescueUpdate]:
                 date=str(tweet.date.date()),
                 url=tweet.url
             ))
+            if len(results) >= max_results:
+                break
     except Exception as e:
         print(f"[❌ TWITTER ERROR] {e}")
     return results
 
 # -------------------------
-# API Endpoint
+# Unified Endpoint
 # -------------------------
 @app.get("/rescue-updates", response_model=RescueUpdatesResponse, operation_id="fetchRescueUpdates")
-async def get_rescue_updates(query: str = Query(..., description="Search term like 'sikkim' or 'rescue'")):
+async def get_rescue_updates(query: str = Query(..., description="Search for 'Sikkim', 'rescue', 'Sandhu', etc.")):
     try:
         pib = await scrape_pib(query)
         sikkim = await scrape_sikkim(query)
