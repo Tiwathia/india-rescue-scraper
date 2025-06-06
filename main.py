@@ -192,3 +192,41 @@ async def get_rescue_updates(query: str = Query(..., description="Search for 'Si
     except Exception as e:
         print(f"[❌ API ERROR] {e}")
         raise
+        @app.get("/rss-summary", response_model=RescueUpdatesResponse, operation_id="getRssSummary")
+async def get_rss_summary():
+    keywords = [
+        "aarti sandhu", "lt col sandhu", "amayra", 
+        "bodies found", "rescued", "indian army", "sikkim"
+    ]
+    results = []
+
+    async def fetch(url: str, source_name: str, selector: str):
+        try:
+            async with httpx.AsyncClient() as client:
+                r = await client.get(url)
+                soup = BeautifulSoup(r.text, "html.parser")
+                for a in soup.select(selector)[:25]:
+                    title = a.get_text(strip=True)
+                    link = a.get("href", "")
+                    if any(k.lower() in title.lower() for k in keywords):
+                        if not link.startswith("http"):
+                            link = url + link
+                        results.append(RescueUpdate(
+                            title=title,
+                            summary=title,
+                            source=source_name,
+                            date=datetime.now().strftime("%Y-%m-%d"),
+                            url=link
+                        ))
+        except Exception as e:
+            print(f"[❌ {source_name} RSS ERROR] {e}")
+
+    await fetch("https://www.ndtv.com/latest", "NDTV", ".news_Itm a")
+    await fetch("https://www.indiatoday.in/india", "India Today", ".catagory-listing a")
+    await fetch("https://timesofindia.indiatimes.com/india", "Times of India", "a")
+    await fetch("https://www.timesnownews.com/india", "Times Now", "a")
+    await fetch("https://pib.gov.in/PressReleasePage.aspx", "PIB India", ".content-area ul li a")
+
+    sorted_results = sorted(results, key=lambda x: x.date, reverse=True)
+    return RescueUpdatesResponse(updates=sorted_results[:10])
+
