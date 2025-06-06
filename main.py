@@ -5,11 +5,8 @@ from typing import List
 import httpx
 from bs4 import BeautifulSoup
 from datetime import datetime, timedelta
-import snscrape.modules.twitter as sntwitter
-import snscrape.base
-
-# Disable SSL verification for snscrape to prevent CERTIFICATE_VERIFY_FAILED
-snscrape.base._base._HTTPConnection.verify = False
+import subprocess
+import json
 
 app = FastAPI(title="India Rescue Updates Scraper API")
 app.mount("/static", StaticFiles(directory="static"), name="static")
@@ -142,39 +139,39 @@ async def scrape_times_now(query: str) -> List[RescueUpdate]:
     return results
 
 # -------------------------
-# Twitter Scraper — Filtered to 72 Hours
+# Twitter Scraper — CLI + 72 Hour Filter
 # -------------------------
 def scrape_twitter_critical_terms(max_results: int = 15) -> List[RescueUpdate]:
-    terms = [
-        '"Lt Col Sandhu"',
-        '"Aarti Sandhu"',
-        '"Amayra Sandhu"',
-        '#SikkimRescue',
-        '#MissingFamily',
-        '"woman rescued Sikkim"',
-        '"bodies found Sikkim"',
-        '"family missing in Sikkim"',
-        '"Indian Army Sikkim rescue"'
+    query_terms = [
+        '"Lt Col Sandhu"', '"Aarti Sandhu"', '"Amayra Sandhu"',
+        '#SikkimRescue', '#MissingFamily',
+        '"woman rescued Sikkim"', '"bodies found Sikkim"',
+        '"family missing in Sikkim"', '"Indian Army Sikkim rescue"'
     ]
-    combined_query = " OR ".join(terms)
-    cutoff = datetime.utcnow() - timedelta(hours=72)
+    query = " OR ".join(query_terms)
+    since = (datetime.utcnow() - timedelta(hours=72)).strftime('%Y-%m-%d')
     results = []
 
     try:
-        for tweet in sntwitter.TwitterSearchScraper(combined_query).get_items():
-            if tweet.date < cutoff:
-                continue
+        cmd = [
+            "snscrape", "--jsonl", "--max-results", str(max_results),
+            "--since", since, "twitter-search", query
+        ]
+        process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        for line in process.stdout:
+            tweet = json.loads(line)
             results.append(RescueUpdate(
-                title=tweet.content[:80] + "...",
-                summary=tweet.content,
-                source=tweet.user.username,
-                date=str(tweet.date.date()),
-                url=tweet.url
+                title=tweet["content"][:80] + "...",
+                summary=tweet["content"],
+                source=tweet["user"]["username"],
+                date=tweet["date"][:10],
+                url=tweet["url"]
             ))
             if len(results) >= max_results:
                 break
     except Exception as e:
-        print(f"[❌ TWITTER ERROR] {e}")
+        print(f"[❌ TWITTER SCRAPE ERROR] {e}")
+
     return results
 
 # -------------------------
